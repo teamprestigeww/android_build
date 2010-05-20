@@ -937,6 +937,23 @@ $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) otatools
 .PHONY: otapackage
 otapackage: $(INTERNAL_OTA_PACKAGE_TARGET)
 
+name := $(TARGET_PRODUCT)
+ifeq ($(TARGET_BUILD_TYPE),debug)
+  name := $(name)_debug
+endif
+name := $(name)-romtgz-$(FILE_NAME_TAG)
+
+INTERNAL_ROMTGZ_PACKAGE_TARGET := $(PRODUCT_OUT)/$(name).rom.tgz
+
+$(INTERNAL_ROMTGZ_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE)
+	@echo "Package ROM.tgz: $@"
+	$(hide) ./build/tools/releasetools/romtgz_from_target_files \
+	   $(HOST_OUT) \
+           $(BUILT_TARGET_FILES_PACKAGE) $@
+
+.PHONY: romtgzpackage
+romtgzpackage: $(INTERNAL_ROMTGZ_PACKAGE_TARGET)
+
 endif    # TARGET_PRODUCT != generic
 endif    # TARGET_PRODUCT != sdk
 endif    # TARGET_SIMULATOR != true
