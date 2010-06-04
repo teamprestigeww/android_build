@@ -87,6 +87,7 @@ libmediaplayerservice.so 0xAB280000
 libmedia.so             0xAB200000
 libFFTEm.so             0xAB100000
 libaudioflinger.so      0xAB000000
+libFLAC.so              0xAAF00000
 
 # assorted system libraries
 libsqlite.so            0xAAC00000
