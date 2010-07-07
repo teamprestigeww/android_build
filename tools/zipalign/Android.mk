@@ -32,3 +32,24 @@ LOCAL_MODULE := zipalign
 
 include $(BUILD_HOST_EXECUTABLE)
 
+# now we build a copy for our system
+
+include $(CLEAR_VARS)
+
+LOCAL_SRC_FILES := \
+	ZipAlign.cpp \
+	ZipEntry.cpp \
+	ZipFile.cpp
+
+LOCAL_C_INCLUDES += external/zlib
+
+LOCAL_SHARED_LIBRARIES := \
+	libutils \
+	libcutils
+
+LOCAL_LDLIBS := -lz
+LOCAL_MODULE := zipalign
+LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
+
+include $(BUILD_EXECUTABLE)
+

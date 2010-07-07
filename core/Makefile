@@ -137,6 +137,7 @@ $(INSTALLED_BUILD_PROP_TARGET): $(BUILDINFO_SH) $(INTERNAL_BUILD_ID_MAKEFILE)
 			TARGET_BOARD_PLATFORM="$(TARGET_BOARD_PLATFORM)" \
 			TARGET_CPU_ABI="$(TARGET_CPU_ABI)" \
 			TARGET_CPU_ABI2="$(TARGET_CPU_ABI2)" \
+			$(PRODUCT_BUILD_PROP_OVERRIDES) \
 	        bash $(BUILDINFO_SH) > $@
 	$(hide) if [ -f $(TARGET_DEVICE_DIR)/system.prop ]; then \
 	          cat $(TARGET_DEVICE_DIR)/system.prop >> $@; \
@@ -968,12 +969,20 @@ else
 $(INTERNAL_OTA_PACKAGE_TARGET): scriptmode := $(TARGET_OTA_SCRIPT_MODE)
 endif
 
+ifeq ($(TARGET_NO_RECOVERY),)
+# default to false
+$(INTERNAL_OTA_PACKAGE_TARGET): recoveryex := false
+else
+$(INTERNAL_OTA_PACKAGE_TARGET): recoveryex := $(TARGET_NO_RECOVERY)
+endif
+
 $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(OTATOOLS)
 	@echo "Package OTA: $@"
 	$(hide) ./build/tools/releasetools/ota_from_target_files \
 	   -m $(scriptmode) \
 	   -p $(HOST_OUT) \
            -k $(KEY_CERT_PAIR) \
+           --recovery=$(recoveryex) \
            $(BUILT_TARGET_FILES_PACKAGE) $@
 
 .PHONY: otapackage
