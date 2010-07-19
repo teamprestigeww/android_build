@@ -282,6 +282,7 @@ ifneq ($(filter dalvik.gc.type-precise,$(PRODUCT_TAGS)),)
   ADDITIONAL_BUILD_PROPERTIES += dalvik.vm.dexopt-flags=m=y
 endif
 
+ifeq (,$(TARGET_BUILD_APPS))
 # Install an apns-conf.xml file if one's not already being installed.
 ifeq (,$(filter %:system/etc/apns-conf.xml, $(PRODUCT_COPY_FILES)))
   PRODUCT_COPY_FILES += \
@@ -302,6 +303,7 @@ ifneq ($(filter eng tests,$(TARGET_BUILD_VARIANT)),)
     endif
   endif
 endif
+endif # !TARGET_BUILD_APPS
 
 ADDITIONAL_BUILD_PROPERTIES += net.bt.name=Android
 
@@ -687,6 +689,9 @@ droidcore: files \
 	$(INSTALLED_USERDATAIMAGE_TARGET) \
 	$(INSTALLED_FILES_FILE)
 
+# dist_libraries only for putting your library into the dist directory with a full build.
+.PHONY: dist_libraries
+
 ifneq ($(TARGET_BUILD_APPS),)
   # If this build is just for apps, only build apps and not the full system by default.
 
@@ -734,7 +739,7 @@ else # TARGET_BUILD_APPS
   endif
 
 # Building a full system-- the default is to build droidcore
-droid: droidcore
+droid: droidcore dist_libraries
 
 endif # TARGET_BUILD_APPS
 
