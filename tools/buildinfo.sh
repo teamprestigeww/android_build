@@ -19,6 +19,9 @@ echo "ro.build.user=$USER"
 echo "ro.build.host=`hostname`"
 echo "ro.build.tags=$BUILD_VERSION_TAGS"
 echo "ro.product.model=$PRODUCT_MODEL"
+if [ ! -z "$PRODUCT_MODEL_INTERNAL" ] ; then
+    echo "ro.product.model.internal=$PRODUCT_MODEL_INTERNAL"
+fi
 echo "ro.product.brand=$PRODUCT_BRAND"
 echo "ro.product.name=$PRODUCT_NAME"
 echo "ro.product.device=$TARGET_DEVICE"
@@ -34,7 +37,11 @@ echo "ro.wifi.channels=$PRODUCT_DEFAULT_WIFI_CHANNELS"
 echo "ro.board.platform=$TARGET_BOARD_PLATFORM"
 
 echo "# ro.build.product is obsolete; use ro.product.device"
-echo "ro.build.product=$TARGET_DEVICE"
+if [ ! -z "$BUILD_PRODUCT" ] ; then
+    echo "ro.build.product=$BUILD_PRODUCT"
+else
+    echo "ro.build.product=$TARGET_DEVICE"
+fi
 
 echo "# Do not try to parse ro.build.description or .fingerprint"
 echo "ro.build.description=$PRIVATE_BUILD_DESC"
