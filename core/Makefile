@@ -301,8 +301,8 @@ $(INSTALLED_RAMDISK_TARGET): $(MKBOOTFS) $(INTERNAL_RAMDISK_FILES) | $(MINIGZIP)
 	$(call pretty,"Target ram disk: $@")
 	$(hide) $(MKBOOTFS) $(TARGET_ROOT_OUT) | $(MINIGZIP) > $@
 
-
-ifneq ($(strip $(TARGET_NO_KERNEL)),true)
+# If neither TARGET_NO_KERNEL nor TARGET_NO_BOOT are true
+ifeq (,$(filter true, $(TARGET_NO_KERNEL) $(TARGET_NO_BOOT)))
 
 # -----------------------------------------------------------------
 # the boot image, which is a collection of other images.
@@ -341,7 +341,7 @@ $(INSTALLED_BOOTIMAGE_TARGET): $(MKBOOTIMG) $(INTERNAL_BOOTIMAGE_FILES)
 	$(hide) $(call assert-max-image-size,$@,$(BOARD_BOOTIMAGE_PARTITION_SIZE),raw)
 endif # TARGET_BOOTIMAGE_USE_EXT2
 
-else	# TARGET_NO_KERNEL
+else	# TARGET_NO_KERNEL/TARGET_NO_BOOT
 # HACK: The top-level targets depend on the bootimage.  Not all targets
 # can produce a bootimage, though, and emulator targets need the ramdisk
 # instead.  Fake it out by calling the ramdisk the bootimage.
@@ -983,13 +983,21 @@ else
 $(INTERNAL_OTA_PACKAGE_TARGET): recoveryex := $(TARGET_NO_RECOVERY)
 endif
 
+ifeq ($(TARGET_NO_BOOT),)
+# default to false
+$(INTERNAL_OTA_PACKAGE_TARGET): bootex := false
+else
+$(INTERNAL_OTA_PACKAGE_TARGET): bootex := $(TARGET_NO_BOOT)
+endif
+
 $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(OTATOOLS)
 	@echo "Package OTA: $@"
 	$(hide) ./build/tools/releasetools/ota_from_target_files \
 	   -m $(scriptmode) \
 	   -p $(HOST_OUT) \
            -k $(KEY_CERT_PAIR) \
-           --recovery=$(recoveryex) \
+           --bootex=$(bootex) \
+           --recoveryex=$(recoveryex) \
            $(BUILT_TARGET_FILES_PACKAGE) $@
 
 .PHONY: otapackage

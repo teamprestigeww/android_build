@@ -48,8 +48,12 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
       Specify 'amend' or 'edify' scripts, or 'auto' to pick
       automatically (this is the default).
 
-  --recovery <boolean>
-      Enable or disable the exclusion of recover.img or recovery/
+  --bootex <boolean>
+      Enable or disable the exclusion of boot.img
+      Disable by default.  Enable in *.mk with TARGET_NO_BOOT := true
+
+  --recoveryex <boolean>
+      Enable or disable the exclusion of recovery.img or recovery/
       Disable by default.  Enable in *.mk with TARGET_NO_RECOVERY := true
 
 """
@@ -87,6 +91,7 @@ OPTIONS.omit_prereq = False
 OPTIONS.extra_script = None
 OPTIONS.script_mode = 'auto'
 OPTIONS.worker_threads = 3
+OPTIONS.bootex = False
 OPTIONS.recoveryex = False
 
 def MostPopularKey(d, default):
@@ -322,7 +327,7 @@ def MakeRecoveryPatch(output_zip, recovery_img, boot_img):
 
   d = Difference(recovery_img, boot_img)
   _, _, patch = d.ComputePatch()
-  if OPTIONS.recoveryex == False:
+  if not OPTIONS.recoveryex:
     common.ZipWriteStr(output_zip, "recovery/recovery-from-boot.p", patch)
     Item.Get("system/recovery-from-boot.p", dir=False)
 
@@ -386,16 +391,17 @@ def WriteFullOTAPackage(input_zip, output_zip):
 
   script.FormatPartition("system")
   script.Mount("MTD", "system", "/system")
-  if OPTIONS.recoveryex == False:
+  if not OPTIONS.recoveryex:
     script.UnpackPackageDir("recovery", "/system")
   script.UnpackPackageDir("system", "/system")
 
   symlinks = CopySystemFiles(input_zip, output_zip)
   script.MakeSymlinks(symlinks)
 
-  boot_img = File("boot.img", common.BuildBootableImage(
-      os.path.join(OPTIONS.input_tmp, "BOOT")))
-  if OPTIONS.recoveryex == False:
+  if not OPTIONS.bootex:
+    boot_img = File("boot.img", common.BuildBootableImage(
+        os.path.join(OPTIONS.input_tmp, "BOOT")))
+  if not OPTIONS.recoveryex:
     recovery_img = File("recovery.img", common.BuildBootableImage(
         os.path.join(OPTIONS.input_tmp, "RECOVERY")))
     MakeRecoveryPatch(output_zip, recovery_img, boot_img)
@@ -403,12 +409,13 @@ def WriteFullOTAPackage(input_zip, output_zip):
   Item.GetMetadata(input_zip)
   Item.Get("system").SetPermissions(script)
 
-  common.CheckSize(boot_img.data, "boot.img")
-  common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
-  script.ShowProgress(0.2, 0)
+  if not OPTIONS.bootex:
+    common.CheckSize(boot_img.data, "boot.img")
+    common.ZipWriteStr(output_zip, "boot.img", boot_img.data)
+    script.ShowProgress(0.2, 0)
 
-  script.ShowProgress(0.2, 10)
-  script.WriteRawImage("boot", "boot.img")
+    script.ShowProgress(0.2, 10)
+    script.WriteRawImage("boot", "boot.img")
 
   script.ShowProgress(0.1, 0)
   device_specific.FullOTA_InstallEnd()
@@ -724,6 +731,7 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
     so_far += source_boot.size
     script.SetProgress(so_far / total_verify_size)
 
+
   if patch_list or updating_recovery or updating_boot:
     script.CacheFreeSpaceCheck(largest_source_size)
 
@@ -868,7 +876,9 @@ def main(argv):
       OPTIONS.script_mode = a
     elif o in ("--worker_threads"):
       OPTIONS.worker_threads = int(a)
-    elif o in ("--recovery"):
+    elif o in ("--bootex"):
+      OPTIONS.bootex = bool(a.lower() == 'true')
+    elif o in ("--recoveryex"):
       OPTIONS.recoveryex = bool(a.lower() == 'true')
     else:
       return False
@@ -884,7 +894,8 @@ def main(argv):
                                               "extra_script=",
                                               "script_mode=",
                                               "worker_threads=",
-                                              "recovery="],
+                                              "bootex=",
+                                              "recoveryex="],
                              extra_option_handler=option_handler)
 
   if len(args) != 2:
