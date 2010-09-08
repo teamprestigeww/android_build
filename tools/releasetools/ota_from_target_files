@@ -56,6 +56,10 @@ Usage:  ota_from_target_files [flags] input_target_files output_ota_package
       Enable or disable the exclusion of recovery.img or recovery/
       Disable by default.  Enable in *.mk with TARGET_NO_RECOVERY := true
 
+  --preinstallex <boolean>
+      Enable or disable the exclusion of preinstall.img or preinstall/
+      Enable by default.  Disable in *.mk with TARGET_NO_PREINSTALL := false
+
 """
 
 import sys
@@ -93,6 +97,7 @@ OPTIONS.script_mode = 'auto'
 OPTIONS.worker_threads = 3
 OPTIONS.bootex = False
 OPTIONS.recoveryex = False
+OPTIONS.preinstallex = True
 
 def MostPopularKey(d, default):
   """Given a dict, return the key corresponding to the largest
@@ -297,6 +302,44 @@ def CopySystemFiles(input_zip, output_zip=None,
   return symlinks
 
 
+def CopyPreinstallFiles(input_zip, output_zip=None,
+                    substitute=None):
+  """Copies files underneath preinstall/ in the input zip to the output
+  zip.  Populates the Item class with their metadata, and returns a
+  list of symlinks.  output_zip may be None, in which case the copy is
+  skipped (but the other side effects still happen).  substitute is an
+  optional dict of {output filename: contents} to be output instead of
+  certain input files.
+  """
+
+  symlinks = []
+
+  for info in input_zip.infolist():
+    if info.filename.startswith("PREINSTALL/"):
+      basefilename = info.filename[11:]
+      if IsSymlink(info):
+        symlinks.append((input_zip.read(info.filename),
+                         "/preinstall/" + basefilename))
+      else:
+        info2 = copy.copy(info)
+        fn = info2.filename = "preinstall/" + basefilename
+        if substitute and fn in substitute and substitute[fn] is None:
+          continue
+        if output_zip is not None:
+          if substitute and fn in substitute:
+            data = substitute[fn]
+          else:
+            data = input_zip.read(info.filename)
+          output_zip.writestr(info2, data)
+        if fn.endswith("/"):
+          Item.Get(fn[:-1], dir=True)
+        else:
+          Item.Get(fn, dir=False)
+
+  symlinks.sort()
+  return symlinks
+
+
 def SignOutput(temp_zip_name, output_zip_name):
   key_passwords = common.GetKeyPasswords([OPTIONS.package_key])
   pw = key_passwords[OPTIONS.package_key]
@@ -391,11 +434,19 @@ def WriteFullOTAPackage(input_zip, output_zip):
 
   script.FormatPartition("system")
   script.Mount("MTD", "system", "/system")
+
   if not OPTIONS.recoveryex:
     script.UnpackPackageDir("recovery", "/system")
   script.UnpackPackageDir("system", "/system")
 
+  if not OPTIONS.preinstallex:
+    script.Mount("MTD", "preinstall", "/preinstall")
+    script.UnpackPackageDir("preinstall", "/preinstall")
+
   symlinks = CopySystemFiles(input_zip, output_zip)
+  if not OPTIONS.preinstallex:
+    symlinks.extend(CopyPreinstallFiles(input_zip, output_zip))
+    symlinks.sort()
   script.MakeSymlinks(symlinks)
 
   if not OPTIONS.bootex:
@@ -408,6 +459,8 @@ def WriteFullOTAPackage(input_zip, output_zip):
 
   Item.GetMetadata(input_zip)
   Item.Get("system").SetPermissions(script)
+  if not OPTIONS.preinstallex:
+    Item.Get("preinstall").SetPermissions(script)
 
   if not OPTIONS.bootex:
     common.CheckSize(boot_img.data, "boot.img")
@@ -458,6 +511,18 @@ def LoadSystemFiles(z):
   for info in z.infolist():
     if info.filename.startswith("SYSTEM/") and not IsSymlink(info):
       fn = "system/" + info.filename[7:]
+      data = z.read(info.filename)
+      out[fn] = File(fn, data)
+  return out
+
+
+def LoadPreinstallFiles(z):
+  """Load all the files from PREINSTALL/... in a given target-files
+  ZipFile, and return a dict of {filename: File object}."""
+  out = {}
+  for info in z.infolist():
+    if info.filename.startswith("PREINSTALL/") and not IsSymlink(info):
+      fn = "preinstall/" + info.filename[11:]
       data = z.read(info.filename)
       out[fn] = File(fn, data)
   return out
@@ -632,8 +697,12 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
 
   print "Loading target..."
   target_data = LoadSystemFiles(target_zip)
+  if not OPTIONS.preinstallex:
+    target_data.update(LoadPreinstallFiles(target_zip))
   print "Loading source..."
   source_data = LoadSystemFiles(source_zip)
+  if not OPTIONS.preinstallex:
+    source_data.update(LoadPreinstallFiles(source_zip))
 
   verbatim_targets = []
   patch_list = []
@@ -677,6 +746,8 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
   metadata["post-build"] = target_fp
 
   script.Mount("MTD", "system", "/system")
+  if not OPTIONS.preinstallex:
+    script.Mount("MTD", "preinstall", "/preinstall")
   script.AssertSomeFingerprint(source_fp, target_fp)
 
   source_boot = File("/tmp/boot.img",
@@ -800,15 +871,22 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
   script.ShowProgress(0.1, 10)
 
   target_symlinks = CopySystemFiles(target_zip, None)
-
+  if not OPTIONS.preinstallex:
+    target_symlinks.extend(CopyPreinstallFiles(target_zip, None))
+    target_symlinks.sort()
   target_symlinks_d = dict([(i[1], i[0]) for i in target_symlinks])
   temp_script = script.MakeTemporary()
   Item.GetMetadata(target_zip)
   Item.Get("system").SetPermissions(temp_script)
+  if not OPTIONS.preinstallex:
+    Item.Get("preinstall").SetPermissions(temp_script)
 
   # Note that this call will mess up the tree of Items, so make sure
   # we're done with it.
   source_symlinks = CopySystemFiles(source_zip, None)
+  if not OPTIONS.preinstallex:
+    source_symlinks.extend(CopyPreinstallFiles(source_zip, None))
+    source_symlinks.sort()
   source_symlinks_d = dict([(i[1], i[0]) for i in source_symlinks])
 
   # Delete all the symlinks in source that aren't in target.  This
@@ -823,6 +901,8 @@ def WriteIncrementalOTAPackage(target_zip, source_zip, output_zip):
   if verbatim_targets:
     script.Print("Unpacking new files...")
     script.UnpackPackageDir("system", "/system")
+    if not OPTIONS.preinstallex:
+      script.UnpackPackageDir("preinstall", "/preinstall")
 
   if updating_recovery:
     script.Print("Unpacking new recovery...")
@@ -880,6 +960,8 @@ def main(argv):
       OPTIONS.bootex = bool(a.lower() == 'true')
     elif o in ("--recoveryex"):
       OPTIONS.recoveryex = bool(a.lower() == 'true')
+    elif o in ("--preinstallex"):
+      OPTIONS.preinstallex = bool(a.lower() == 'true')
     else:
       return False
     return True
@@ -895,7 +977,8 @@ def main(argv):
                                               "script_mode=",
                                               "worker_threads=",
                                               "bootex=",
-                                              "recoveryex="],
+                                              "recoveryex=",
+                                              "preinstallex="],
                              extra_option_handler=option_handler)
 
   if len(args) != 2:

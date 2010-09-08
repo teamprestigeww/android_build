@@ -633,6 +633,105 @@ endif
 
 
 # -----------------------------------------------------------------
+# preinstall yaffs image
+#
+# First, the "unoptimized" image, which contains .apk/.jar files
+# that contain regular, unoptimized/unverified .dex entries.
+#
+
+# only build preinstall if we explicitly state TARGET_NO_PREINSTALL := false
+ifeq ($(TARGET_NO_PREINSTALL),false)
+
+preinstallimage_unopt_intermediates := \
+	$(call intermediates-dir-for,PACKAGING,preinstallimage_unopt)
+BUILT_PREINSTALLIMAGE_UNOPT := $(preinstallimage_unopt_intermediates)/preinstall.img
+
+INTERNAL_PREINSTALLIMAGE_FILES := $(filter $(TARGET_PREINSTALL_OUT)/%, \
+	$(ALL_PREBUILT) \
+	$(ALL_COPIED_HEADERS) \
+	$(ALL_GENERATED_SOURCES) \
+	$(ALL_DEFAULT_INSTALLED_MODULES))
+
+ifeq ($(TARGET_USERIMAGES_USE_EXT2),true)
+## generate an ext2 image
+# $(1): output file
+define build-preinstallimage-target
+    @echo "Target preinstall fs image: $(1)"
+    $(call build-userimage-ext2-target,$(TARGET_PREINSTALL_OUT),$(1),preinstall,)
+endef
+
+else # TARGET_USERIMAGES_USE_EXT2 != true
+
+## generate a yaffs2 image
+# $(1): output file
+define build-preinstallimage-target
+    @echo "Target preinstall fs image: $(1)"
+    @mkdir -p $(dir $(1))
+    $(hide) $(MKYAFFS2) $(mkyaffs2_extra_flags) $(TARGET_PREINSTALL_OUT) $(1)
+endef
+endif # TARGET_USERIMAGES_USE_EXT2
+
+$(BUILT_PREINSTALLIMAGE_UNOPT): $(INTERNAL_PREINSTALLIMAGE_FILES) $(INTERNAL_MKUSERFS)
+	$(call build-preinstallimage-target,$@)
+
+#ifdef WITH_DEXPREOPT
+#  ifndef DISABLE_DEXPREOPT
+#    with_dexpreopt := true
+#  endif
+#endif
+#ifdef with_dexpreopt
+#  # This file will set BUILT_PREINSTALLIMAGE and PREINSTALLIMAGE_SOURCE_DIR
+#  include build/tools/dexpreopt/Config-Preinstall.mk
+#else
+BUILT_PREINSTALLIMAGE := $(BUILT_PREINSTALLIMAGE_UNOPT)
+PREINSTALLIMAGE_SOURCE_DIR := $(TARGET_PREINSTALL_OUT)
+#endif
+
+# The installed image, which may be optimized or unoptimized.
+#
+INSTALLED_PREINSTALLIMAGE := $(PRODUCT_OUT)/preinstall.img
+
+$(INSTALLED_PREINSTALLIMAGE): $(BUILT_PREINSTALLIMAGE) | $(ACP)
+	@echo "Install preinstall fs image: $@"
+	$(copy-file-to-target)
+	$(hide) $(call assert-max-image-size,$@,$(BOARD_PREINSTALLIMAGE_PARTITION_SIZE),yaffs)
+
+preinstallimage: $(INSTALLED_PREINSTALLIMAGE)
+
+.PHONY: preinstallimage-nodeps pnod
+preinstallimage-nodeps pnod: $(filter-out preinstallimage-nodeps pnod,$(MAKECMDGOALS)) \
+	            | $(INTERNAL_MKUSERFS)
+	@echo "make $@: ignoring dependencies"
+	$(call build-preinstallimage-target,$(INSTALLED_PREINSTALLIMAGE))
+	$(hide) $(call assert-max-image-size,$(INSTALLED_PREINSTALLIMAGE),$(BOARD_PREINSTALLIMAGE_PARTITION_SIZE),yaffs)
+
+#######
+## preinstall tarball
+define build-preinstalltarball-target
+    $(call pretty,"Target preinstall fs tarball: $(INSTALLED_PREINSTALLTARBALL_TARGET)")
+    $(MKTARBALL) $(FS_GET_STATS) \
+		$(PRODUCT_OUT) preinstall $(PRIVATE_PREINSTALL_TAR) \
+		$(INSTALLED_PREINSTALLTARBALL_TARGET)
+endef
+
+preinstall_tar := $(PRODUCT_OUT)/preinstall.tar
+INSTALLED_PREINSTALLTARBALL_TARGET := $(preinstall_tar).bz2
+$(INSTALLED_PREINSTALLTARBALL_TARGET): PRIVATE_PREINSTALL_TAR := $(preinstall_tar)
+$(INSTALLED_PREINSTALLTARBALL_TARGET): $(FS_GET_STATS) $(INTERNAL_PREINSTALLIMAGE_FILES)
+	$(build-preinstalltarball-target)
+
+.PHONY: preinstalltarball-nodeps
+preinstalltarball-nodeps: $(FS_GET_STATS) \
+                      $(filter-out preinstalltarball-nodeps ptnod,$(MAKECMDGOALS))
+	$(build-preinstalltarball-target)
+
+.PHONY: ptnod
+ptnod: preinstalltarball-nodeps
+else
+INSTALLED_PREINSTALLIMAGE :=
+endif
+
+# -----------------------------------------------------------------
 # system yaffs image
 #
 # First, the "unoptimized" image, which contains .apk/.jar files
@@ -875,6 +974,7 @@ $(BUILT_TARGET_FILES_PACKAGE): \
 		$(INSTALLED_RADIOIMAGE_TARGET) \
 		$(INSTALLED_RECOVERYIMAGE_TARGET) \
 		$(INSTALLED_SYSTEMIMAGE) \
+		$(INSTALLED_PREINSTALLIMAGE) \
 		$(INSTALLED_USERDATAIMAGE_TARGET) \
 		$(INSTALLED_ANDROID_INFO_TXT_TARGET) \
 		$(built_ota_tools) \
@@ -924,6 +1024,11 @@ endif
 	@# Contents of the system image
 	$(hide) $(call package_files-copy-root, \
 		$(SYSTEMIMAGE_SOURCE_DIR),$(zip_root)/SYSTEM)
+ifneq (,$(INSTALLED_PREINSTALLIMAGE))
+	@# Contents of the preinstall image
+	$(hide) $(call package_files-copy-root, \
+		$(PREINSTALLIMAGE_SOURCE_DIR),$(zip_root)/PREINSTALL)
+endif
 	@# Contents of the data image
 	$(hide) $(call package_files-copy-root, \
 		$(TARGET_OUT_DATA),$(zip_root)/DATA)
@@ -940,6 +1045,9 @@ endif
 	$(hide) echo "blocksize $(BOARD_FLASH_BLOCK_SIZE)" > $(zip_root)/META/imagesizes.txt
 	$(hide) echo "boot $(call image-size-from-data-size,$(BOARD_BOOTIMAGE_PARTITION_SIZE))" >> $(zip_root)/META/imagesizes.txt
 	$(hide) echo "recovery $(call image-size-from-data-size,$(BOARD_RECOVERYIMAGE_PARTITION_SIZE))" >> $(zip_root)/META/imagesizes.txt
+ifneq (,$(INSTALLED_PREINSTALLIMAGE))
+	$(hide) echo "preinstall $(call image-size-from-data-size,$(BOARD_PREINSTALLIMAGE_PARTITION_SIZE))" >> $(zip_root)/META/imagesizes.txt
+endif
 	$(hide) echo "system $(call image-size-from-data-size,$(BOARD_SYSTEMIMAGE_PARTITION_SIZE))" >> $(zip_root)/META/imagesizes.txt
 	$(hide) echo "userdata $(call image-size-from-data-size,$(BOARD_USERDATAIMAGE_PARTITION_SIZE))" >> $(zip_root)/META/imagesizes.txt
 	$(hide) echo "$(tool_extensions)" > $(zip_root)/META/tool-extensions.txt
@@ -947,6 +1055,9 @@ endif
 	$(hide) (cd $(zip_root) && zip -qry ../$(notdir $@) .)
 	@# Run fs_config on all the system files in the zip, and save the output
 	$(hide) zipinfo -1 $@ | awk -F/ 'BEGIN { OFS="/" } /^SYSTEM\// {$$1 = "system"; print}' | $(HOST_OUT_EXECUTABLES)/fs_config > $(zip_root)/META/filesystem_config.txt
+ifneq (,$(INSTALLED_PREINSTALLIMAGE))
+	$(hide) zipinfo -1 $@ | awk -F/ 'BEGIN { OFS="/" } /^PREINSTALL\// {$$1 = "preinstall"; print}' | $(HOST_OUT_EXECUTABLES)/fs_config >> $(zip_root)/META/filesystem_config.txt
+endif
 	$(hide) (cd $(zip_root) && zip -q ../$(notdir $@) META/filesystem_config.txt)
 
 
@@ -976,6 +1087,13 @@ else
 $(INTERNAL_OTA_PACKAGE_TARGET): scriptmode := $(TARGET_OTA_SCRIPT_MODE)
 endif
 
+ifeq ($(TARGET_NO_PREINSTALL),)
+# default to true
+$(INTERNAL_OTA_PACKAGE_TARGET): preinstallex := true
+else
+$(INTERNAL_OTA_PACKAGE_TARGET): preinstallex := $(TARGET_NO_PREINSTALL)
+endif
+
 ifeq ($(TARGET_NO_RECOVERY),)
 # default to false
 $(INTERNAL_OTA_PACKAGE_TARGET): recoveryex := false
@@ -999,6 +1117,7 @@ $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(OTATOOLS)
            -n \
            --bootex=$(bootex) \
            --recoveryex=$(recoveryex) \
+           --preinstallex=$(preinstallex) \
            $(BUILT_TARGET_FILES_PACKAGE) $@
 
 .PHONY: otapackage
@@ -1013,11 +1132,11 @@ endif    # TARGET_SIMULATOR != true
 # Depending on $(INSTALLED_SYSTEMIMAGE) ensures that it
 # gets the DexOpt one if we're doing that.
 INSTALLED_FILES_FILE := $(PRODUCT_OUT)/installed-files.txt
-$(INSTALLED_FILES_FILE): $(INSTALLED_SYSTEMIMAGE)
+$(INSTALLED_FILES_FILE): $(INSTALLED_SYSTEMIMAGE) $(INSTALLED_PREINSTALLIMAGE)
 	@echo Installed file list: $@
 	@mkdir -p $(dir $@)
 	@rm -f $@
-	$(hide) build/tools/fileslist.py $(TARGET_OUT) $(TARGET_OUT_DATA) > $@
+	$(hide) build/tools/fileslist.py $(TARGET_OUT) $(TARGET_OUT_DATA) $(TARGET_PREINSTALL_OUT) > $@
 
 .PHONY: installed-file-list
 installed-file-list: $(INSTALLED_FILES_FILE)
