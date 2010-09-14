@@ -1087,25 +1087,37 @@ else
 $(INTERNAL_OTA_PACKAGE_TARGET): scriptmode := $(TARGET_OTA_SCRIPT_MODE)
 endif
 
+ifeq ($(TARGET_OTA_NO_PREINSTALL),)
 ifeq ($(TARGET_NO_PREINSTALL),)
 # default to true
 $(INTERNAL_OTA_PACKAGE_TARGET): preinstallex := true
 else
 $(INTERNAL_OTA_PACKAGE_TARGET): preinstallex := $(TARGET_NO_PREINSTALL)
 endif
+else
+$(INTERNAL_OTA_PACKAGE_TARGET): preinstallex := $(TARGET_OTA_NO_PREINSTALL)
+endif
 
+ifeq ($(TARGET_OTA_NO_RECOVERY),)
 ifeq ($(TARGET_NO_RECOVERY),)
 # default to false
 $(INTERNAL_OTA_PACKAGE_TARGET): recoveryex := false
 else
 $(INTERNAL_OTA_PACKAGE_TARGET): recoveryex := $(TARGET_NO_RECOVERY)
 endif
+else
+$(INTERNAL_OTA_PACKAGE_TARGET): recoveryex := $(TARGET_OTA_NO_RECOVERY)
+endif
 
+ifeq ($(TARGET_OTA_NO_BOOT),)
 ifeq ($(TARGET_NO_BOOT),)
 # default to false
 $(INTERNAL_OTA_PACKAGE_TARGET): bootex := false
 else
 $(INTERNAL_OTA_PACKAGE_TARGET): bootex := $(TARGET_NO_BOOT)
+endif
+else
+$(INTERNAL_OTA_PACKAGE_TARGET): bootex := $(TARGET_OTA_NO_BOOT)
 endif
 
 $(INTERNAL_OTA_PACKAGE_TARGET): $(BUILT_TARGET_FILES_PACKAGE) $(OTATOOLS)
