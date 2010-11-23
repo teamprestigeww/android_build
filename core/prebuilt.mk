@@ -30,14 +30,14 @@ PACKAGES.$(LOCAL_MODULE).OVERRIDES := $(strip $(LOCAL_OVERRIDES_PACKAGES))
 
 # Ensure that prebuilt .apks have been aligned.
 ifneq ($(filter APPS,$(LOCAL_MODULE_CLASS)),)
-$(LOCAL_BUILT_MODULE) : $(LOCAL_PATH)/$(LOCAL_SRC_FILES) | $(ZIPALIGN)
+$(LOCAL_BUILT_MODULE) : $(LOCAL_PATH)/$(LOCAL_SRC_FILES) | $(LOCAL_ADDITIONAL_DEPENDENCIES) $(ZIPALIGN)
 	$(transform-prebuilt-to-target-with-zipalign)
 else
 ifneq ($(LOCAL_PREBUILT_STRIP_COMMENTS),)
-$(LOCAL_BUILT_MODULE) : $(LOCAL_PATH)/$(LOCAL_SRC_FILES)
+$(LOCAL_BUILT_MODULE) : $(LOCAL_PATH)/$(LOCAL_SRC_FILES) | $(LOCAL_ADDITIONAL_DEPENDENCIES)
 	$(transform-prebuilt-to-target-strip-comments)
 else
-$(LOCAL_BUILT_MODULE) : $(LOCAL_PATH)/$(LOCAL_SRC_FILES) | $(ACP)
+$(LOCAL_BUILT_MODULE) : $(LOCAL_PATH)/$(LOCAL_SRC_FILES) | $(LOCAL_ADDITIONAL_DEPENDENCIES) $(ACP)
 	$(transform-prebuilt-to-target)
 endif
 endif
