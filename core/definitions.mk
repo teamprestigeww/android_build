@@ -677,6 +677,7 @@ define dump-module-variables
 @echo PRIVATE_ALL_STATIC_LIBRARIES=$(PRIVATE_ALL_STATIC_LIBRARIES);
 @echo PRIVATE_ALL_WHOLE_STATIC_LIBRARIES=$(PRIVATE_ALL_WHOLE_STATIC_LIBRARIES);
 @echo PRIVATE_ALL_OBJECTS=$(PRIVATE_ALL_OBJECTS);
+@echo PRIVATE_DEVICE=$(PRIVATE_DEVICE);
 endef
 
 ###########################################################
@@ -783,6 +784,9 @@ $(hide) $(PRIVATE_CXX) \
 	$(PRIVATE_CFLAGS) \
 	$(PRIVATE_CPPFLAGS) \
 	$(PRIVATE_DEBUG_CFLAGS) \
+	$(if $(PRIVATE_DEVICE), \
+	    -D__DEVICE_$(PRIVATE_DEVICE)__, \
+	 ) \
 	-MD -o $@ $<
 $(hide) $(transform-d-to-p)
 endef
@@ -813,6 +817,9 @@ $(hide) $(PRIVATE_CC) \
 	$(PRIVATE_CFLAGS) \
 	$(1) \
 	$(PRIVATE_DEBUG_CFLAGS) \
+	$(if $(PRIVATE_DEVICE), \
+	    -D__DEVICE_$(PRIVATE_DEVICE)__, \
+	 ) \
 	-MD -o $@ $<
 endef
 
@@ -877,6 +884,9 @@ $(hide) $(PRIVATE_CXX) \
 	$(PRIVATE_CFLAGS) \
 	$(PRIVATE_CPPFLAGS) \
 	$(PRIVATE_DEBUG_CFLAGS) \
+	$(if $(PRIVATE_DEVICE), \
+	    -D__DEVICE_$(PRIVATE_DEVICE)__, \
+	 ) \
 	-MD -o $@ $<
 $(transform-d-to-p)
 endef
@@ -906,6 +916,9 @@ $(hide) $(PRIVATE_CC) \
 	$(PRIVATE_CFLAGS) \
 	$(1) \
 	$(PRIVATE_DEBUG_CFLAGS) \
+	$(if $(PRIVATE_DEVICE), \
+	    -D__DEVICE_$(PRIVATE_DEVICE)__, \
+	 ) \
 	-MD -o $@ $<
 endef
 
