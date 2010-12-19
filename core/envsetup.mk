@@ -119,6 +119,17 @@ else
   HOST_PREBUILT_TAG := $(HOST_OS)-$(HOST_ARCH)
 endif
 
+# Default to building dalvikvm on hosts that support it...
+ifeq ($(HOST_OS),linux)
+# ... but not if we're building the sim...
+ifneq ($(TARGET_SIMULATOR),true)
+# ... or if the if the option is already set
+ifeq ($(WITH_HOST_DALVIK),)
+	WITH_HOST_DALVIK := true
+endif
+endif
+endif
+
 
 # ---------------------------------------------------------------
 # Set up configuration for target machine.
@@ -265,7 +276,7 @@ TARGET_INSTALLER_DATA_OUT := $(TARGET_INSTALLER_OUT)/data
 TARGET_INSTALLER_ROOT_OUT := $(TARGET_INSTALLER_OUT)/root
 TARGET_INSTALLER_SYSTEM_OUT := $(TARGET_INSTALLER_OUT)/root/system
 
-COMMON_MODULE_CLASSES := JAVA_LIBRARIES NOTICE_FILES
+COMMON_MODULE_CLASSES := TARGET-NOTICE_FILES HOST-NOTICE_FILES HOST-JAVA_LIBRARIES
 
 ifeq (,$(strip $(DIST_DIR)))
   DIST_DIR := $(OUT_DIR)/dist
@@ -286,7 +297,7 @@ ifeq ($(TARGET_SIMULATOR),true)
 	ABP:=$(ABP):$(TARGET_OUT_EXECUTABLES)
 else
 	# this should be copied to HOST_OUT_EXECUTABLES instead
-	ABP:=$(ABP):$(PWD)/prebuilt/$(HOST_PREBUILT_TAG)/toolchain/arm-eabi-4.4.0/bin
+	ABP:=$(ABP):$(PWD)/prebuilt/$(HOST_PREBUILT_TAG)/toolchain/arm-eabi-4.4.3/bin
 endif
 ANDROID_BUILD_PATHS := $(ABP)
 ANDROID_PREBUILTS := prebuilt/$(HOST_PREBUILT_TAG)
