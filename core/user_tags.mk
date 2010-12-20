@@ -27,6 +27,7 @@ GRANDFATHERED_USER_MODULES :=
 
 GRANDFATHERED_USER_MODULES += \
 	20-dns.conf \
+	5652rgb \
 	95-configured \
 	aapt \
 	acp \
@@ -92,6 +93,7 @@ GRANDFATHERED_USER_MODULES += \
 	dnsmasq \
 	draw9patch \
 	droiddoc \
+	dspexec \
 	dumpeventlog \
 	dumpkey \
 	dump_regions \
@@ -182,10 +184,12 @@ GRANDFATHERED_USER_MODULES += \
 	libbluedroid \
 	libbluetooth \
 	libbluetoothd \
+	libbridge \
 	libbuiltinplugin \
 	libbundlewrapper \
 	libbz \
 	libc \
+	libcamera \
 	libcamera_client \
 	libcameraservice \
 	libcamerastub \
@@ -193,6 +197,7 @@ GRANDFATHERED_USER_MODULES += \
 	libc_nomalloc \
 	libctest \
 	libcutils \
+	libCustomWifi \
 	libdb \
 	libdbus \
 	libdiskconfig \
@@ -215,6 +220,7 @@ GRANDFATHERED_USER_MODULES += \
 	libfdlibm \
 	libfdlibm-host \
 	libFFTEm \
+	libFLAC \
 	libfst \
 	libft2 \
 	libgdbus_static \
@@ -332,6 +338,7 @@ GRANDFATHERED_USER_MODULES += \
 	libsysutils \
 	libthread_db \
 	libtinyxml \
+	libtiOsLib \
 	libtomcrypt \
 	libtommath \
 	libttspico \
@@ -389,6 +396,7 @@ GRANDFATHERED_USER_MODULES += \
 	org-netbeans-api-visual \
 	org-openide-util \
 	osgi \
+	overlay.omap3 \
 	pand \
 	parseStringTest \
 	ping \
@@ -443,6 +451,7 @@ GRANDFATHERED_USER_MODULES += \
 	sqlite3 \
 	stack_dump \
 	stringtemplate \
+	su \
 	surfaceflinger \
 	svc \
 	swing-worker-1.1 \
@@ -455,6 +464,7 @@ GRANDFATHERED_USER_MODULES += \
 	test-progress-new \
 	test_swiarb \
 	test_zipfile \
+	tiwlan.ini \
 	toolbox \
 	traceview \
 	tuttle2.kcm \
@@ -464,6 +474,8 @@ GRANDFATHERED_USER_MODULES += \
 	vm-tests \
 	vold \
 	wdsclient \
+	wlan_cu \
+	wlan_loader \
 	wpa_supplicant \
 	wpa_supplicant.conf \
 	xmlwriter \
