@@ -125,6 +125,7 @@ GRANDFATHERED_USER_MODULES += \
 	fw_bcm4329.bin \
 	genext2fs \
 	gps.mahimahi \
+	gps.sholes \
 	gralloc.default \
 	gralloc.qsd8k \
 	groovy-all-1.7.0 \
@@ -254,6 +255,7 @@ GRANDFATHERED_USER_MODULES += \
 	libmincrypt \
 	libminui \
 	libminzip \
+	libmoto_gps \
 	libmtdutils \
 	libmusicbundle \
 	libneo_cgi \
@@ -261,6 +263,7 @@ GRANDFATHERED_USER_MODULES += \
 	libneo_util \
 	libnetlink \
 	libnetutils \
+	libnmea \
 	libop \
 	libOpenSLES \
 	libopensles_helper \
@@ -278,6 +281,7 @@ GRANDFATHERED_USER_MODULES += \
 	libreverb \
 	libreverbwrapper \
 	libril \
+	libril_rds \
 	librpc \
 	librtp_jni \
 	libsafe_iop \
