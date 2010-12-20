@@ -63,6 +63,7 @@ GRANDFATHERED_USER_MODULES += \
 	bootanimation \
 	brcm_patchram_plus \
 	bugreport \
+	busybox \
 	cfassembler \
 	check_stack \
 	check_trace \
@@ -187,17 +188,20 @@ GRANDFATHERED_USER_MODULES += \
 	libbridge \
 	libbuiltinplugin \
 	libbundlewrapper \
+	libbusybox \
 	libbz \
 	libc \
+	libc-ext \
 	libcamera \
 	libcamera_client \
 	libcameraservice \
 	libcamerastub \
 	libc_common \
 	libc_nomalloc \
+	libclearsilverregex \
 	libctest \
-	libcutils \
 	libCustomWifi \
+	libcutils \
 	libdb \
 	libdbus \
 	libdiskconfig \
