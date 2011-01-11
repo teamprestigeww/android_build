@@ -576,6 +576,12 @@ ifdef BOARD_KERNEL_BASE
   INTERNAL_RECOVERYIMAGE_ARGS += --base $(BOARD_KERNEL_BASE)
 endif
 
+INTERNAL_RECOVERY_FILES := $(filter $(TARGET_RECOVERY_OUT)/%, \
+	$(ALL_PREBUILT) \
+	$(ALL_COPIED_HEADERS) \
+	$(ALL_GENERATED_SOURCES) \
+	$(ALL_DEFAULT_INSTALLED_MODULES))
+
 # Keys authorized to sign OTA packages this build will accept.  The
 # build always uses test-keys for this; release packaging tools will
 # substitute other keys for this one.
@@ -594,6 +600,7 @@ $(RECOVERY_INSTALL_OTA_KEYS): $(OTA_PUBLIC_KEYS) $(DUMPKEY_JAR)
 	java -jar $(DUMPKEY_JAR) $(PRIVATE_OTA_PUBLIC_KEYS) > $@
 
 $(INSTALLED_RECOVERYIMAGE_TARGET): $(MKBOOTFS) $(MKBOOTIMG) $(MINIGZIP) \
+		$(INTERNAL_RECOVERY_FILES) \
 		$(INSTALLED_RAMDISK_TARGET) \
 		$(INSTALLED_BOOTIMAGE_TARGET) \
 		$(recovery_binary) \
@@ -602,7 +609,6 @@ $(INSTALLED_RECOVERYIMAGE_TARGET): $(MKBOOTFS) $(MKBOOTIMG) $(MINIGZIP) \
 		$(recovery_build_prop) $(recovery_resource_deps) \
 		$(RECOVERY_INSTALL_OTA_KEYS)
 	@echo ----- Making recovery image ------
-	rm -rf $(TARGET_RECOVERY_OUT)
 	mkdir -p $(TARGET_RECOVERY_OUT)
 	mkdir -p $(TARGET_RECOVERY_ROOT_OUT)
 	mkdir -p $(TARGET_RECOVERY_ROOT_OUT)/etc
@@ -612,6 +618,8 @@ $(INSTALLED_RECOVERYIMAGE_TARGET): $(MKBOOTFS) $(MKBOOTIMG) $(MINIGZIP) \
 	echo Modifying ramdisk contents...
 	cp -f $(recovery_initrc) $(TARGET_RECOVERY_ROOT_OUT)/
 	cp -f $(recovery_binary) $(TARGET_RECOVERY_ROOT_OUT)/sbin/
+	rm -f $(TARGET_RECOVERY_ROOT_OUT)/init.*.rc
+	mkdir -p $(TARGET_RECOVERY_ROOT_OUT)/system/bin
 	cp -rf $(recovery_resources_common) $(TARGET_RECOVERY_ROOT_OUT)/
 	$(foreach item,$(recovery_resources_private), \
 	  cp -rf $(item) $(TARGET_RECOVERY_ROOT_OUT)/)
@@ -800,7 +808,7 @@ endif
 # image size check calculation.
 ifneq ($(INSTALLED_RECOVERYIMAGE_TARGET),)
 intermediates := $(call intermediates-dir-for,PACKAGING,recovery_patch)
-RECOVERY_FROM_BOOT_PATCH := $(intermediates)/recovery_from_boot.p
+RECOVERY_FROM_BOOT_PATCH := #$(intermediates)/recovery_from_boot.p
 $(RECOVERY_FROM_BOOT_PATCH): $(INSTALLED_RECOVERYIMAGE_TARGET) \
                              $(INSTALLED_BOOTIMAGE_TARGET) \
 			     $(HOST_OUT_EXECUTABLES)/imgdiff \
